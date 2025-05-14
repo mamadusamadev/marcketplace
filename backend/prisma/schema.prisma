@@ -1,0 +1,217 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CLIENT
+  SELLER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model User {
+  id            Int          @id @default(autoincrement())
+  name          String
+  email         String       @unique
+  password      String
+  phone         String?
+  city          String?
+  postalCode    String?
+  country       String?
+  address     String?
+  photoUrl      String?      // ← campo novo para URL da foto
+  role          Role         @default(CLIENT)
+  status        UserStatus   @default(ACTIVE)
+  products      Product[]
+  orders        Order[]
+  addresses     Address[]
+  reviews       Review[]
+  resetToken         String?  
+  resetTokenExpires  DateTime?
+  isDeleted Boolean @default(false)
+  wantsToBeSeller Boolean @default(false)
+  seller      Seller?
+
+
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+enum ProductCondition {
+  NEW
+  LIKE_NEW
+  GOOD
+  ACCEPTABLE
+}
+
+model Category {
+  id    Int     @id @default(autoincrement())
+  name  String  @unique
+  products Product[]
+}
+
+
+// schema.prisma (Product + Enums)
+
+model Product {
+  id           Int               @id @default(autoincrement())
+  seller       User              @relation(fields: [sellerId], references: [id])
+  sellerId     Int
+  title        String
+  description  String
+  price        Decimal           @db.Decimal(10, 2)
+  condition    ProductCondition
+  location     String
+  category     Category          @relation(fields: [categoryId], references: [id])
+  categoryId   Int
+  active       Boolean           @default(true)
+
+  images       ProductImage[]
+  reviews      Review[]
+  ordersItem   OrderItem[]
+
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model ProductImage {
+  id        Int      @id @default(autoincrement())
+  url       String
+  product   Product  @relation(fields: [productId], references: [id])
+  productId Int
+}
+
+
+
+
+
+model Order {
+  id          Int       @id @default(autoincrement())
+  client      User      @relation(fields: [clientId], references: [id])
+  clientId    Int
+  items       OrderItem[]
+  total       Float
+  status      String    @default("PENDING")
+  payment     Payment?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model OrderItem {
+  id          Int       @id @default(autoincrement())
+  order       Order     @relation(fields: [orderId], references: [id])
+  orderId     Int
+  product     Product   @relation(fields: [productId], references: [id])
+  productId   Int
+  quantity    Int
+  price       Float
+}
+
+model Payment {
+  id          Int       @id @default(autoincrement())
+  order       Order     @relation(fields: [orderId], references: [id])
+  orderId     Int       @unique
+  method      String
+  status      String    @default("PENDING")
+  paidAt      DateTime?
+}
+
+
+//Avaliações 
+model Review {
+  id          Int       @id @default(autoincrement())
+  user        User      @relation(fields: [userId], references: [id])
+  userId      Int
+  product     Product   @relation(fields: [productId], references: [id])
+  productId   Int
+  rating      Int
+  comment     String
+  createdAt   DateTime  @default(now())
+}
+
+model Address {
+  id          Int       @id @default(autoincrement())
+  user        User      @relation(fields: [userId], references: [id])
+  userId      Int
+  street      String
+  city        String
+  state       String
+  postalCode  String
+  country     String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+
+
+
+model Seller {
+  id                 Int                @id @default(autoincrement())
+  user               User               @relation(fields: [userId], references: [id])
+  userId             Int               @unique
+  slug               String            @unique
+  documentId         String?           // número do documento oficial
+  documentUrl        String?           // link para o PDF ou imagem
+  iban               String?           // IBAN para receber pagamentos
+  status             SellerStatus      @default(PENDING_ANALYSIS)
+  verificationStatus VerificationStatus @default(PENDING)
+  verificationDate   DateTime?
+  rejectionReason    String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+}
+
+enum SellerStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_ANALYSIS
+}
+
+enum VerificationStatus {
+  VERIFIED
+  PENDING
+  REJECTED
+  MISSING_DOCUMENTS
+}
+
+
+
+// schema.prisma
+
+model ShippingZone {
+  id        Int      @id @default(autoincrement())
+  name      String   // Ex: “Sul de Portugal”
+  country   String   // Ex: “Portugal”, “Espanha”
+  price     Decimal  @db.Decimal(10, 2)
+  cities    City[]   // cidades associadas
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+model City {
+  id            Int            @id @default(autoincrement())
+  name          String
+  shippingZone  ShippingZone  @relation(fields: [shippingZoneId], references: [id])
+  shippingZoneId Int
+}
+
+model MarketplaceFee {
+  id       Int     @id @default(autoincrement())
+  percent  Float   // ex: 10.0 = 10%
+  active   Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
