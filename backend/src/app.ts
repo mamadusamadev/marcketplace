@@ -9,7 +9,7 @@ import userRoutes from './routes/user.routes';
 import sellerRouter from './routes/seller.routes';
 import adminRouter from './routes/admin.routes';
 import productRoutes from './routes/product.routes';
-
+import favoriteRoutes from './routes/favorite.routes';
 
 const app = express();
 
@@ -25,6 +25,7 @@ app.use('/api/users', userRoutes);
 app.use("/api/sellers", sellerRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/products", productRoutes);
+app.use("/api/favorites", favoriteRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
